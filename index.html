@@ -1,82 +1,1 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-
-	<title>jafl/digsimp @ GitHub</title>
-	
-	<style type="text/css">
-		body {
-  		margin-top: 1.0em;
-  		background-color: #6c570a;
-		  font-family: "Helvetica,Arial,FreeSans";
-  		color: #ffffff;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-		h1 { font-size: 3.8em; color: #93a8f5; margin-bottom: 3px; }
-		h1 .small { font-size: 0.4em; }
-		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; color: #93a8f5; }
-    h3 { text-align: center; color: #93a8f5; }
-    a { color: #93a8f5; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-		pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-	</style>
-	
-</head>
-
-<body>
-  <a href="http://github.com/jafl/digsimp"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
-
-  <div id="container">
-
-    <div class="download">
-      <a href="http://github.com/jafl/digsimp/zipball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
-      <a href="http://github.com/jafl/digsimp/tarball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
-    </div>
-
-    <h1><a href="http://github.com/jafl/digsimp">digsimp</a>
-      <span class="small">by <a href="http://github.com/jafl">jafl</a></span></h1>
-
-    <div class="description">
-      Digital Logic Simplification
-    </div>
-
-    <h2>License</h2>
-<p>BSD</p>
-<h2>Authors</h2>
-<p>John Lindal</p>
-<h2>Contact</h2>
-<p>John Lindal (github@newplanetsoftware.com)<br/>      </p>
-
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="http://github.com/jafl/digsimp/zipball/master">zip</a> or
-      <a href="http://github.com/jafl/digsimp/tarball/master">tar</a> formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/jafl/digsimp</pre>
-    </p>
-
-    <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/jafl/digsimp">jafl/digsimp</a>
-    </div>
-
-  </div>
-
-  
-</body>
-</html>
+<html><head>	<title>DigSimp</title>	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>	<script src="http://yui.yahooapis.com/3.2.0/build/yui/yui-min.js"></script>	<style type="text/css">	#truth { float:left; margin-right:2em; }	#main { display:none; }	.instr { font-size:80%; color:#666; }	</style></head><body><a href="http://github.com/jafl/digsimp"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"></a><h1>Digital Logic Simplification</h1><form id="form-count">	<p><label for="count">Enter the number of variables:</label>	<input type="text" id="count"><br>	<input type="submit" value="Create truth table"></p></form><div id="main">	<table id="truth"></table>	<div id="io">		<form id="form-input">			<p><label for="">Enter a Boolean expression:</label>			<input type="text" id="input-fn">			<span class="instr">Debug: <span id="input-expr"></span></span><br>			<span class="instr">AND is implicit , OR is + , NOT is ^ or ! , example:  A(B+^C)</span><br>			<span class="instr">(If the results are incorrect, send me your expression and the debugging expression.)</span><br>			<input type="submit" value="Fill truth table"></p>		</form>		<p><button id="invert">Invert truth table</button></p>		<p><button id="analyze">Analyze truth table</button></p>		<p id="expr"></p>	</div></div><script type="text/javascript">YUI().use('node-style', function(Y){	var var_count = 0,		row_count = 0,		table = Y.one('#truth'),		expr = Y.one('#expr');	function toBinary(i)	{		var b = i.toString(2).split('');		while (b.length < var_count)		{			b.unshift('0');		}		return b;	}	// generate truth table	Y.on('submit', function(e)	{		e.halt();		var_count = parseInt(Y.one('#count').get('value'), 10);		if (var_count < 2 || 26 < var_count)		{			alert('The number of variables must be between 2 and 26, inclusive.');			return;		}		var s = '<thead>';		for (var i=0; i<var_count; i++)		{			s += '<th>' + String.fromCharCode(65+i) + '</th>';		}		s += '<th>Value</th></thead><tbody>';		var options =			'<option>0</option>' +			'<option>1</option>' +			'<option>X</option>';		row_count = Math.pow(2, var_count);		for (var i=0; i<row_count; i++)		{			var b = toBinary(i);			s += '<tr>';			for (var j=0; j<var_count; j++)			{				s += '<td>' + b[j] + '</td>';			}			s += '<td><select id="value-' + i + '">' + options + '</select>';			s += '</tr>';		}		s += '</tbody>';		table.set('innerHTML', s);		Y.one('#main').setStyle('display', 'block');	},	'#form-count');	// fill truth table	Y.on('submit', function(e)	{		e.halt();		// convert Boolean expression to JavaScript code		var s = Y.one('#input-fn').get('value')				 .toUpperCase()				 .replace(/\s+/g, '')				 .replace(/\+/g, '||')				 .replace(/\^/g, '!');		// replace() never considers the same character twice,		// so AB^C won't convert correctly in a single pass.		while (1)		{			var s1 = s.replace(/([\)A-Z])([\(!A-Z])/g, '$1&&$2');			if (s1 == s)			{				break;			}			s = s1;		}		// display result for debugging		Y.one('#input-expr').set('innerHTML', s);		// populate truth table		for (var i=0; i<row_count; i++)		{			var b = toBinary(i);			for (var j=0; j<var_count; j++)			{				eval('var ' + String.fromCharCode(65+j) + '=' + b[j]);			}			table.get('children')				.item(1).get('children')				.item(i).one('select')				.set('value', eval(s) ? 1 : 0);		}	},	'#form-input');	// invert truth table	Y.on('click', function(e)	{		for (var i=0; i<row_count; i++)		{			var menu = table.get('children')							.item(1).get('children')							.item(i).one('select');			var value = menu.get('value');			if (value != 'X')			{				menu.set('value', value == 1 ? 0 : 1);			}		}	},	'#invert');	// Quine-McCluskey	Y.on('click', function(e)	{		expr.set('innerHTML', 'not implemented yet');	},	'#analyze');});</script></body></html>
