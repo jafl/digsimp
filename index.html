@@ -1,1 +1,486 @@
-<html><head>	<title>DigSimp</title>	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>	<meta name="description" content="Boolean Expression Minimization">	<meta name="keywords" content="Quine-McCluskey, Karnaugh, Digital, Boolean, Expression">	<script src="http://yui.yahooapis.com/3.2.0/build/yui/yui-min.js"></script>	<style type="text/css">	.intro { width:50%; }	.instr { font-size:80%; color:#666; }	.debug { display:none; }	#count { width:3em; }	#main td { vertical-align:top; }	#truth { margin-right:3em; }	#modify { margin-top:0; }	</style></head><body><a href="http://github.com/jafl/digsimp"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"></a><h1>Digital Logic Simplification</h1><p class="intro">This page generates a Boolean expression from a truth table using the Quine-McCluskey algorithm.  The results are the same as what you would get from a Karnaugh Map, but it works for more than 4 variables.</p><table id="main"><tr><td>	<div id="truth-container"></div></td><td>	<div id="io">		<h2 id="modify">Modify</h2>		<form id="form-count">			<p><label for="count">Change the number of variables:</label>			<input type="text" id="count" value="4"><input type="submit" value="Rebuild truth table"><br>			<span class="instr">More than 10 variables can take a long time!</span></p>		</form>		<p>			<button id="fill-zero">Set all to "0"</button>			<button id="fill-one">Set all to "1"</button>			<button id="fill-dont-care">Set all to "Don't care"</button>		</p>		<p><button id="invert">Negate all values</button></p>		<form id="form-input">			<p><label for="">Enter a Boolean expression:</label>			<input type="text" id="input-fn"><input type="submit" value="Fill truth table"><br>			<span class="instr">AND is implicit , OR is + , NOT is ^ or ! , example:  A(B+^C)</span><br>			<span class="instr debug">				(If the results are incorrect, send me your expression and the debugging expression.)<br>				(Debug: <span id="input-expr"></span>)			</span></p>		</form>		<h2>Analyze</h2>		<p><button id="analyze">Simplest Sum of Products</button></p>		<p id="expr"></p>		<p id="debug" class="instr debug"></p>		<h2>Debug</h2>		<p><button id="enable-debug">Enable debugging</button></p>		<p><a href="http://newplanetsoftware.com/form/contact.php">Send feedback</a></p>	</div></td></tr></table><script type="text/javascript">YUI().use('node-style', function(Y){	Y.on('domready', function()	{		if (YUI.Env.UA.ie)		{			Y.one('#enable-debug').setStyle('display', 'none');		}	});	var var_min = 2,		var_max = 26,		var_count = 0,		row_count = 0,		table,		expr = Y.one('#expr');	function toBinary(i)	{		var b = i.toString(2).split('');		while (b.length < var_count)		{			b.unshift('0');		}		return b;	}	function fromBinary(b)	{		return parseInt(b.join(''), 2);	}	function valueMenu(i)	{		return table.get('children')					.item(1).get('children')					.item(i).one('select');	}	function value(i)	{		return valueMenu(i).get('value');	}	Y.on('click', function(e)	{		Y.all('.debug').setStyle('display', 'inherit');	},	'#enable-debug');	// generate truth table	function buildTruthTable()	{		var_count = parseInt(Y.one('#count').get('value'), 10);		if (!Y.Lang.isNumber(var_count) || var_count < var_min || var_max < var_count)		{			alert('The number of variables must be between 2 and 26, inclusive.');			return;		}		var s = '<table id="truth"><thead>';		for (var i=0; i<var_count; i++)		{			s += '<th>' + String.fromCharCode(65+i) + '</th>';		}		s += '<th>Value</th></thead><tbody>';		var options =			'<option>0</option>' +			'<option>1</option>' +			'<option>X</option>';		row_count = Math.pow(2, var_count);		for (var i=0; i<row_count; i++)		{			var b = toBinary(i);			s += '<tr>';			for (var j=0; j<var_count; j++)			{				s += '<td>' + b[j] + '</td>';			}			s += '<td><select id="value-' + i + '">' + options + '</select>';			s += '</tr>';		}		s += '</tbody></table>';		Y.one('#truth-container').set('innerHTML', s);		table = Y.one('#truth');	}	Y.on('submit', function(e)	{		e.halt();		buildTruthTable();	},	'#form-count');	Y.on('domready', buildTruthTable);	// fill truth table	Y.on('submit', function(e)	{		e.halt();		// convert Boolean expression to JavaScript code		var s = Y.one('#input-fn').get('value')				 .toUpperCase()				 .replace(/\s+/g, '')				 .replace(/\+/g, '||')				 .replace(/\^/g, '!');		// replace() never considers the same character twice,		// so AB^C won't convert correctly in a single pass.		while (1)		{			var s1 = s.replace(/([\)A-Z])([\(!A-Z])/g, '$1&&$2');			if (s1 == s)			{				break;			}			s = s1;		}		// display result for debugging		Y.one('#input-expr').set('innerHTML', s.replace(/\|\|/g, ' || '));		// populate truth table		try		{			for (var i=0; i<row_count; i++)			{				var b = toBinary(i);				for (var j=0; j<var_count; j++)				{					eval('var ' + String.fromCharCode(65+j) + '=' + b[j]);				}				valueMenu(i).set('value', eval(s) ? '1' : '0');			}		}		catch (e)		{			alert('Unable to evaluate the expression that you entered.  Please check that you have the correct number of variables in the truth table and that the syntax is correct.');		}	},	'#form-input');	// invert truth table	Y.on('click', function(e)	{		table.all('select').each(function(e)		{			var value = e.get('value');			if (value != 'X')			{				e.set('value', value == '1' ? '0' : '1');			}		});	},	'#invert');	// fill truth table	Y.on('click', function(e)	{		table.all('select').set('value', '0');	},	'#fill-zero');	Y.on('click', function(e)	{		table.all('select').set('value', '1');	},	'#fill-one');	Y.on('click', function(e)	{		table.all('select').set('value', 'X');	},	'#fill-dont-care');	// Quine-McCluskey	function hasPI(		/* array */	pi,		/* array */	b)	{		b = b.join('');		for (var i=0; i<pi.length; i++)		{			if (b == pi[i].join(''))			{				return true;			}		}		return false;	}	Y.on('click', function(e)	{		var debug = '';		// find 1's (and X's)		var pi    = [],			terms = [];		for (var i=0; i<row_count; i++)		{			var v = value(i);			if (v !== '0')			{				var b = toBinary(i);				pi.push(b);				if (v === '1')				{					terms.push(b);				}			}		}		// generate prime implicants		do		{			debug += '<hr>' + pi.join('<br>');			var pi2     = [];			var changed = false;			var covered = [];			for (var i=0; i<pi.length; i++)			{				var b       = pi[i];				var matched = false;				for (var j=pi.length-1; j>i; j--)				{					var b1 = pi[j];					var d  = -1;					for (var k=0; k<var_count; k++)					{						var different = (b[k] !== b1[k]);						if (different && d == -1)						{							d = k;						}						else if (different)						{							d = -1;							break;						}					}					if (d >= 0)					{						var b2 = b.slice(0);						b2[d]  = 'X';						if (!hasPI(pi2, b2))						{							pi2.push(b2);						}						changed = covered[j] = matched = true;					}				}				if (!matched && !covered[i])				{					pi2.push(b);				}			}			pi = pi2;		}			while (changed);		// compute coverage of each 1 in truth table		var coverage = [];		for (var i=0; i<terms.length; i++)		{			var t = terms[i];			for (var j=0; j<pi.length; j++)			{				var b      = pi[j];				var covers = true;				for (var k=0; k<var_count; k++)				{					if (b[k] !== t[k] && b[k] !== 'X')					{						covers = false;						break;					}				}				if (covers)				{					coverage[i] = (coverage[i] || 0) + 1;				}			}		}		debug += '<hr>' + coverage.join(',<WBR>');		// remove unnecessary prime implicants		for (var i=pi.length-1; i>=0; i--)		{			var b     = pi[i],				c     = [],				extra = true;			for (var j=0; j<terms.length; j++)			{				var t      = terms[j],					covers = true;				for (var k=0; k<var_count; k++)				{					if (b[k] !== t[k] && b[k] !== 'X')					{						covers = false;						break;					}				}				if (covers)				{					c.push(j);					if (coverage[j] == 1)					{						extra = false;					}				}			}			if (extra)			{				pi.splice(i,1);				for (var j=0; j<c.length; j++)				{					coverage[ c[j] ]--;				}			}		}		debug += '<hr>' + pi.join('<br>');		debug += '<hr>' + coverage.join(',<WBR>');		// display result		var s = '';		for (var i=0; i<pi.length; i++)		{			if (i > 0)			{				s += ' + ';			}			var b = pi[i];			for (var j=0; j<var_count; j++)			{				if (b[j] !== 'X')				{					if (b[j] === '0')					{						s += '^';					}					s += String.fromCharCode(65+j);				}			}		}		if (!s && pi.length == 0)		{			s = 'Constant: 0';		}		else if (!s && pi.length == 1)		{			s = 'Constant: 1';		}		expr.set('innerHTML', s);		if (!YUI.Env.UA.ie)		{			Y.one('#debug').set('innerHTML', debug);		}	},	'#analyze');});</script></body></html><!--^ab^c^d + a^b^c^d + a^bc^d + a^bcd + ab^c^d + abcd	X: 1001, 1110	B^C^D + A^B + AC	B^C^D + A^D + AC-->
+<html>
+<head>
+	<title>DigSimp</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<meta name="description" content="Boolean Expression Minimization">
+	<meta name="keywords" content="Quine-McCluskey, Karnaugh, Digital, Boolean, Expression">
+
+	<script src="https://jafl.github.io/yui3/build/yui/yui-min.js"></script>
+
+	<style type="text/css">
+	.intro { width:50%; }
+	.instr { font-size:80%; color:#666; }
+	.debug { display:none; }
+	#count { width:3em; }
+	#main td { vertical-align:top; }
+	#truth { margin-right:3em; }
+	#modify { margin-top:0; }
+	</style>
+</head>
+
+<body>
+
+<a href="http://github.com/jafl/digsimp"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"></a>
+
+<h1>Digital Logic Simplification</h1>
+
+<p class="intro">This page generates a Boolean expression from a truth table using the Quine-McCluskey algorithm.  The results are the same as what you would get from a Karnaugh Map, but it works for more than 4 variables.</p>
+
+<table id="main">
+<tr><td>
+	<div id="truth-container"></div>
+</td><td>
+	<div id="io">
+		<h2 id="modify">Modify</h2>
+
+		<form id="form-count">
+			<p><label for="count">Change the number of variables:</label>
+			<input type="text" id="count" value="4"><input type="submit" value="Rebuild truth table"><br>
+			<span class="instr">More than 10 variables can take a long time!</span></p>
+		</form>
+
+		<p>
+			<button id="fill-zero">Set all to "0"</button>
+			<button id="fill-one">Set all to "1"</button>
+			<button id="fill-dont-care">Set all to "Don't care"</button>
+		</p>
+
+		<p><button id="invert">Negate all values</button></p>
+
+		<form id="form-input">
+			<p><label for="">Enter a Boolean expression:</label>
+			<input type="text" id="input-fn"><input type="submit" value="Fill truth table"><br>
+			<span class="instr">AND is implicit , OR is + , NOT is ^ or ! , example:  A(B+^C)</span><br>
+			<span class="instr debug">
+				(If the results are incorrect, send me your expression and the debugging expression.)<br>
+				(Debug: <span id="input-expr"></span>)
+			</span></p>
+		</form>
+
+		<h2>Analyze</h2>
+
+		<p><button id="analyze">Simplest Sum of Products</button></p>
+		<p id="expr"></p>
+		<p id="debug" class="instr debug"></p>
+
+		<h2>Debug</h2>
+
+		<p><button id="enable-debug">Enable debugging</button></p>
+
+		<p><a href="http://newplanetsoftware.com/form/contact.php">Send feedback</a></p>
+	</div>
+</td></tr>
+</table>
+
+<script type="text/javascript">
+YUI().use('node-style', function(Y)
+{
+	Y.on('domready', function()
+	{
+		if (YUI.Env.UA.ie)
+		{
+			Y.one('#enable-debug').setStyle('display', 'none');
+		}
+	});
+
+	var var_min = 2,
+		var_max = 26,
+		var_count = 0,
+		row_count = 0,
+		table,
+		expr = Y.one('#expr');
+
+	function toBinary(i)
+	{
+		var b = i.toString(2).split('');
+		while (b.length < var_count)
+		{
+			b.unshift('0');
+		}
+		return b;
+	}
+
+	function fromBinary(b)
+	{
+		return parseInt(b.join(''), 2);
+	}
+
+	function valueMenu(i)
+	{
+		return table.get('children')
+					.item(1).get('children')
+					.item(i).one('select');
+	}
+
+	function value(i)
+	{
+		return valueMenu(i).get('value');
+	}
+
+	Y.on('click', function(e)
+	{
+		Y.all('.debug').setStyle('display', 'inherit');
+	},
+	'#enable-debug');
+
+	// generate truth table
+
+	function buildTruthTable()
+	{
+		var_count = parseInt(Y.one('#count').get('value'), 10);
+		if (!Y.Lang.isNumber(var_count) || var_count < var_min || var_max < var_count)
+		{
+			alert('The number of variables must be between 2 and 26, inclusive.');
+			return;
+		}
+
+		var s = '<table id="truth"><thead>';
+
+		for (var i=0; i<var_count; i++)
+		{
+			s += '<th>' + String.fromCharCode(65+i) + '</th>';
+		}
+
+		s += '<th>Value</th></thead><tbody>';
+
+		var options =
+			'<option>0</option>' +
+			'<option>1</option>' +
+			'<option>X</option>';
+
+		row_count = Math.pow(2, var_count);
+		for (var i=0; i<row_count; i++)
+		{
+			var b = toBinary(i);
+
+			s += '<tr>';
+
+			for (var j=0; j<var_count; j++)
+			{
+				s += '<td>' + b[j] + '</td>';
+			}
+
+			s += '<td><select id="value-' + i + '">' + options + '</select>';
+			s += '</tr>';
+		}
+
+		s += '</tbody></table>';
+		Y.one('#truth-container').set('innerHTML', s);
+		table = Y.one('#truth');
+	}
+
+	Y.on('submit', function(e)
+	{
+		e.halt();
+		buildTruthTable();
+	},
+	'#form-count');
+
+	Y.on('domready', buildTruthTable);
+
+	// fill truth table
+
+	Y.on('submit', function(e)
+	{
+		e.halt();
+
+		// convert Boolean expression to JavaScript code
+
+		var s = Y.one('#input-fn').get('value')
+				 .toUpperCase()
+				 .replace(/\s+/g, '')
+				 .replace(/\+/g, '||')
+				 .replace(/\^/g, '!');
+
+		// replace() never considers the same character twice,
+		// so AB^C won't convert correctly in a single pass.
+
+		while (1)
+		{
+			var s1 = s.replace(/([\)A-Z])([\(!A-Z])/g, '$1&&$2');
+			if (s1 == s)
+			{
+				break;
+			}
+			s = s1;
+		}
+
+		// display result for debugging
+
+		Y.one('#input-expr').set('innerHTML', s.replace(/\|\|/g, ' || '));
+
+		// populate truth table
+
+		try
+		{
+			for (var i=0; i<row_count; i++)
+			{
+				var b = toBinary(i);
+				for (var j=0; j<var_count; j++)
+				{
+					eval('var ' + String.fromCharCode(65+j) + '=' + b[j]);
+				}
+
+				valueMenu(i).set('value', eval(s) ? '1' : '0');
+			}
+		}
+		catch (e)
+		{
+			alert('Unable to evaluate the expression that you entered.  Please check that you have the correct number of variables in the truth table and that the syntax is correct.');
+		}
+	},
+	'#form-input');
+
+	// invert truth table
+
+	Y.on('click', function(e)
+	{
+		table.all('select').each(function(e)
+		{
+			var value = e.get('value');
+			if (value != 'X')
+			{
+				e.set('value', value == '1' ? '0' : '1');
+			}
+		});
+	},
+	'#invert');
+
+	// fill truth table
+
+	Y.on('click', function(e)
+	{
+		table.all('select').set('value', '0');
+	},
+	'#fill-zero');
+
+	Y.on('click', function(e)
+	{
+		table.all('select').set('value', '1');
+	},
+	'#fill-one');
+
+	Y.on('click', function(e)
+	{
+		table.all('select').set('value', 'X');
+	},
+	'#fill-dont-care');
+
+	// Quine-McCluskey
+
+	function hasPI(
+		/* array */	pi,
+		/* array */	b)
+	{
+		b = b.join('');
+		for (var i=0; i<pi.length; i++)
+		{
+			if (b == pi[i].join(''))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	Y.on('click', function(e)
+	{
+		var debug = '';
+
+		// find 1's (and X's)
+
+		var pi    = [],
+			terms = [];
+
+		for (var i=0; i<row_count; i++)
+		{
+			var v = value(i);
+			if (v !== '0')
+			{
+				var b = toBinary(i);
+				pi.push(b);
+				if (v === '1')
+				{
+					terms.push(b);
+				}
+			}
+		}
+
+		// generate prime implicants
+
+		do
+		{
+			debug += '<hr>' + pi.join('<br>');
+
+			var pi2     = [];
+			var changed = false;
+			var covered = [];
+			for (var i=0; i<pi.length; i++)
+			{
+				var b       = pi[i];
+				var matched = false;
+				for (var j=pi.length-1; j>i; j--)
+				{
+					var b1 = pi[j];
+					var d  = -1;
+					for (var k=0; k<var_count; k++)
+					{
+						var different = (b[k] !== b1[k]);
+						if (different && d == -1)
+						{
+							d = k;
+						}
+						else if (different)
+						{
+							d = -1;
+							break;
+						}
+					}
+
+					if (d >= 0)
+					{
+						var b2 = b.slice(0);
+						b2[d]  = 'X';
+						if (!hasPI(pi2, b2))
+						{
+							pi2.push(b2);
+						}
+						changed = covered[j] = matched = true;
+					}
+				}
+
+				if (!matched && !covered[i])
+				{
+					pi2.push(b);
+				}
+			}
+
+			pi = pi2;
+		}
+			while (changed);
+
+		// compute coverage of each 1 in truth table
+
+		var coverage = [];
+		for (var i=0; i<terms.length; i++)
+		{
+			var t = terms[i];
+			for (var j=0; j<pi.length; j++)
+			{
+				var b      = pi[j];
+				var covers = true;
+				for (var k=0; k<var_count; k++)
+				{
+					if (b[k] !== t[k] && b[k] !== 'X')
+					{
+						covers = false;
+						break;
+					}
+				}
+
+				if (covers)
+				{
+					coverage[i] = (coverage[i] || 0) + 1;
+				}
+			}
+		}
+
+		debug += '<hr>' + coverage.join(',<WBR>');
+
+		// remove unnecessary prime implicants
+
+		for (var i=pi.length-1; i>=0; i--)
+		{
+			var b     = pi[i],
+				c     = [],
+				extra = true;
+			for (var j=0; j<terms.length; j++)
+			{
+				var t      = terms[j],
+					covers = true;
+				for (var k=0; k<var_count; k++)
+				{
+					if (b[k] !== t[k] && b[k] !== 'X')
+					{
+						covers = false;
+						break;
+					}
+				}
+
+				if (covers)
+				{
+					c.push(j);
+					if (coverage[j] == 1)
+					{
+						extra = false;
+					}
+				}
+			}
+
+			if (extra)
+			{
+				pi.splice(i,1);
+				for (var j=0; j<c.length; j++)
+				{
+					coverage[ c[j] ]--;
+				}
+			}
+		}
+
+		debug += '<hr>' + pi.join('<br>');
+		debug += '<hr>' + coverage.join(',<WBR>');
+
+		// display result
+
+		var s = '';
+		for (var i=0; i<pi.length; i++)
+		{
+			if (i > 0)
+			{
+				s += ' + ';
+			}
+
+			var b = pi[i];
+			for (var j=0; j<var_count; j++)
+			{
+				if (b[j] !== 'X')
+				{
+					if (b[j] === '0')
+					{
+						s += '^';
+					}
+					s += String.fromCharCode(65+j);
+				}
+			}
+		}
+
+		if (!s && pi.length == 0)
+		{
+			s = 'Constant: 0';
+		}
+		else if (!s && pi.length == 1)
+		{
+			s = 'Constant: 1';
+		}
+
+		expr.set('innerHTML', s);
+
+		if (!YUI.Env.UA.ie)
+		{
+			Y.one('#debug').set('innerHTML', debug);
+		}
+	},
+	'#analyze');
+});
+</script>
+
+</body>
+</html>
+
+<!--
+^ab^c^d + a^b^c^d + a^bc^d + a^bcd + ab^c^d + abcd
+	X: 1001, 1110
+	B^C^D + A^B + AC
+	B^C^D + A^D + AC
+-->
